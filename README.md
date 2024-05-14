@@ -10,32 +10,32 @@ I am using `Proxmox VE 8` as the LXC host. It is based on `Debian` with some mod
 
 ## Prepare the LXC
 
-First, install a Ubuntu 22.04 LTS LXC. No special configuration is needed here, besides making sure that enough disk space is given to the container so that the huge driver (and other nVidia components) will not overflow the entire disk.
+First, install a Ubuntu 22.04 LTS LXC. No special configuration is needed here, besides making sure that enough disk space is given to the container so that the huge driver (and other nVidia components) will not overflow the disk.
 
 ## Actual installation
-
-In this part of the guide, I will cover how to pass through nVidia GPU to the LXC container.
 
 If we oversimplify things a little bit in the world of Linux, everything is a file in the system. Thus, the principle of this part is quite similar to mounting host file into the guest file system. We mount the nVidia "device file" into the LXC and install the driver.
 
 ### Install GPU driver on the host
 
-First, we need to get the nVidia "device file" in the host. By default, Linux use [nouveau](https://nouveau.freedesktop.org/) driver for nVidia. It is a great project, but it does not support CUDA program right now. (Maybe [NVK](https://docs.mesa3d.org/drivers/nvk.html) driver will in one day, hopefully.) Consequently, the "device files" that are available to us are from nouveau driver, and are not what we want. And we need to install nVidia proprietary driver (Sad face).
+First, we need to get the nVidia "device file" in the host. By default, Linux use [nouveau](https://nouveau.freedesktop.org/) driver for nVidia. It is a great project, but it does not support CUDA program right now. (Maybe [NVK](https://docs.mesa3d.org/drivers/nvk.html) driver will, hopefully.) Consequently, the "device files" that are available to us are from nouveau driver, and are not what we want. And we need to install nVidia proprietary driver (Sad face).
 
-Because we eventually will have two nVidia driver running in both host and container, we do not want the package manager of the host or the guest OS in the container update the driver by themselves or automatically. Thus, we are going to use the universal `.run` file from nVidia download center. Even though it is also possible to use package pinning in Ubuntu or similar functionality in other system, `.run` driver installer also provides a wider selection of driver, and is more portable.
-
-You can copy the link by right click the download.
+Because we eventually will have two nVidia driver running in both host and container, we do not want the package manager of the host or the guest OS in the container update the driver by themselves or automatically. Thus, we are going to use the universal `.run` file from nVidia download center. Even though it is also possible to use package pinning in Ubuntu or similar functionality in other distro, `.run` driver installer still offers advantage like a wider selection of driver, and portability.
 
 Inside the host machine,
 
 ```bash
+# wget command here download the nvidia driver version 550.78 for AMD64 platform from the US site
 wget https://us.download.nvidia.com/XFree86/Linux-x86_64/550.78/NVIDIA-Linux-x86_64-550.78.run
+# chmod command here make the downloaded file executable
 chmod +x NVIDIA-Linux-x86_64-550.78.run
+# Execute the executable file
 ./NVIDIA-Linux-x86_64-550.78.run
 ```
 
 Note:
 
+- In the nVidia driver download page, after selecting the desired version of the driver. You can find the link by right click the download, and select "copy the link".
 - If your download failed and you start download again, the file will be named og name.1 and so on.
 - Please check compatible driver version with your installed GPU. The link above is only an example.
 - This method requires a driver reinstallation for every kernel update.
@@ -51,6 +51,7 @@ Now, let's set up the permission and mount the GPU.
 First, let's look at the permission of the usage of GPU in the host machine.
 
 ```bash
+# list the details of files and folder that follow the format of nvidia* in /dev/
 ls -l /dev/nvidia*
 ls -l /dev/dri/
 ```
