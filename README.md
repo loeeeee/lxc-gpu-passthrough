@@ -2,7 +2,7 @@
 
 A guide for [nVidia](https://www.nvidia.com/) GPU passthrough on a [Ubuntu](https://ubuntu.com/) LXC ([Linux Containers](https://linuxcontainers.org/)) with a [Proxmox VE](https://www.proxmox.com/en/proxmox-virtual-environment/overview) 8 host.
 
-This guide should be widely applicable to other LXC guest system that is supported by nVidia driver, because we only need to do minimal modification inside the guest system.
+This guide should be widely applicable to other LXC guest system that is supported by nVidia driver, because we only need to do minimal modification inside the guest system. The principle of this guide should also be applicable to AMD gpu passthrough.
 
 ## Host setup
 
@@ -35,9 +35,10 @@ chmod +x NVIDIA-Linux-x86_64-550.78.run
 
 Note:
 
+- Please check compatible driver version with your installed GPU. The link above is only an example.
+- Please use the highest driver version available to your GPU, unless you know what you are doing.
 - In the nVidia driver download page, after selecting the desired version of the driver. You can find the link by right click the download, and select "copy the link".
 - If your download failed and you start download again, the file will be named og name.1 and so on.
-- Please check compatible driver version with your installed GPU. The link above is only an example.
 - This method requires a driver reinstallation for every kernel update.
 
 After the installation, proceed with a reboot of the host.
@@ -121,3 +122,32 @@ Note:
 After all these, we should be able to run `nvidia-smi` inside the LXC without error.
 
 Zu easy, innit?
+
+
+## nVidia driver and its compatibility with other components explained
+
+This is a TL;DR of the lengthy (but good) documents nVidia provided on their website.
+
+### nVidia driver
+
+As far as what we are concerned about, nVidia driver provides the software environment where a GPU-accelerated program can be executed. Applying all kinds of acronyms, we could "translate" the sentence to following. CUDA runtime provided by nVidia driver allows the execution of CUDA-enabled programs.
+
+For each version of nVidia driver, for example, 550.78, there is a CUDA runtime version, in this case, 12.4. This information is provided on nVidia driver website. For purpose other than gaming (mostly), we care about CUDA runtime version.
+
+The CUDA version is made up of `xx.y`. `xx` is the major version, and `y` is the minor version. The current major versions are 11, 12. The minimal version does not matter in most cases, and bigger is better.
+
+**No cross-major version compatibility**: During the compile of the program, a targeted CUDA version is chosen. And program made for one major version of CUDA runtime could not run in another major version of CUDA runtime.
+
+However, most program with active development should have switched to CUDA 12 by now, since the first CUDA 12 enabled driver was released on 2022.
+
+**Recommendation**: Unless specifically required, users should install the latest driver version.
+
+### CUDA toolkit (NVCC)
+
+As far as we are concerned about, nVidia driver toolkit provides a software development environment where a GPU-accelerated program will be compiled. Technically, we do not need a GPU with CUDA runtime or a GPU at all to use CUDA toolkit. However, in practice, we often compile the program locally and run/test it locally, which is the reason nvidia zip CUDA runtime and CUDA toolkit installer together in their download site. The thing we care most in the CUDA toolkit is the NVCC. It is a compiler that produces binaries that can be executed on the GPU (Not a technical explanation, sorry compiler dudes).
+
+When installing CUDA toolkit in the LXC, there are two major additional steps. 
+
+**Kernel Header**: This file gives the CUDA toolkit of the knowledge of current system kernel. It is just like any other header files in C, like `#include <stdio.h>`. It is a specially a problem for a LXC installation, because the kernel is shared with the host machine. In the case of Proxmox VE, it is a modified kernel. The solution to this is adding the Proxmox VE's source into the guest OS's package repository, and do a package pinning in the guest OS.
+
+### CuDNN
